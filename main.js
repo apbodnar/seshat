@@ -7,7 +7,7 @@ function Particles(){
   let simulationFrameBuffers = [];
   let pingpong = 0;
   let scale = 1;
-  let texDims = 128;
+  let texDims = 64;
   let invTexDims = 1/texDims;
   let numPoints = texDims*texDims;
   let perspective = mat4.perspective(mat4.create(), 1.6, window.innerWidth/window.innerHeight, 0.1, 10);
@@ -140,8 +140,8 @@ function Particles(){
     let v2 = new Float32Array(numPoints*3);
     for ( let i=0; i<texDims; i++ ){
       for ( let j=0; j<texDims; j++ ){
-        tv1.push((j - texDims / 2)*invTexDims * 5);
-        tv1.push((i - texDims / 2)*invTexDims * 5);
+        tv1.push((j - texDims / 2)*invTexDims * 4);
+        tv1.push((i - texDims / 2)*invTexDims * 4);
         tv1.push(0)
       }
     }
@@ -152,7 +152,7 @@ function Particles(){
     //   v1[i+2] = 1;
     // }
 
-    //v0[3 * texDims * texDims / 2 + + 3 * texDims / 2] = 0.01;
+    v0[2] = 100;
     // for ( let i=0; i<numPoints*3; i+=3 ){
     //   v0[i] = 0.0;
     //   v0[i+1] = 0.0;
