@@ -7,7 +7,7 @@ function Particles(){
   let simulationFrameBuffers = [];
   let pingpong = 0;
   let scale = 1;
-  let texDims = 64;
+  let texDims = 128;
   let invTexDims = 1/texDims;
   let numPoints = texDims*texDims;
   let perspective = mat4.perspective(mat4.create(), 1.6, window.innerWidth/window.innerHeight, 0.1, 10);
@@ -142,7 +142,7 @@ function Particles(){
       for ( let j=0; j<texDims; j++ ){
         tv1.push((j - texDims / 2)*invTexDims * 4);
         tv1.push((i - texDims / 2)*invTexDims * 4);
-        tv1.push(0)
+        tv1.push(i/texDims)
       }
     }
     let v1 = new Float32Array(tv1);
@@ -152,7 +152,7 @@ function Particles(){
     //   v1[i+2] = 1;
     // }
 
-    v0[2] = 100;
+    //v0[2] = 0.1;
     // for ( let i=0; i<numPoints*3; i+=3 ){
     //   v0[i] = 0.0;
     //   v0[i+1] = 0.0;
@@ -209,7 +209,9 @@ function Particles(){
   }
 
   function callSim(i){
-    callSimulation(i);
+    for(let i = 0; i < 24; i++){
+      callSimulation(i);
+    }
   }
 
   function callDraw(i){
@@ -219,6 +221,7 @@ function Particles(){
     gl.useProgram(program);
     gl.uniform1i(program.uniforms.posTex, 0);
     gl.uniform1i(program.uniforms.velTex, 1);
+    gl.uniform1i(program.uniforms.accTex, 2);
     gl.uniform2f(program.uniforms.invDims, invTexDims, invTexDims);
     gl.uniformMatrix4fv(program.uniforms.perspective, false, perspective);
     gl.uniformMatrix4fv(program.uniforms.rotation, false, rotation);
@@ -228,6 +231,8 @@ function Particles(){
     gl.bindTexture(gl.TEXTURE_2D, textures.position[i%2]);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, textures.velocity[i%2]);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, textures.acceleration[i%2]);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.coords);
     gl.vertexAttribPointer(program.attributes.coords, 2, gl.FLOAT, false, 0, 0);
