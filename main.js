@@ -7,7 +7,7 @@ function Particles(){
   let simulationFrameBuffers = [];
   let pingpong = 0;
   let scale = 1;
-  let texDims = 128;
+  let texDims = 256;
   let invTexDims = 1/texDims;
   let numPoints = texDims*texDims;
   let perspective = mat4.perspective(mat4.create(), 1.6, window.innerWidth/window.innerHeight, 0.1, 10);
@@ -209,7 +209,7 @@ function Particles(){
   }
 
   function callSim(i){
-    for(let i = 0; i < 24; i++){
+    for(let i = 0; i < 60; i++){
       callSimulation(i);
     }
   }

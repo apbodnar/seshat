@@ -20,7 +20,7 @@ vec3 neighborForce(vec2 coords, vec3 origin){
   vec3 diff = origin - pos;
   float r = length(diff);
   vec3 dir = normalize(diff);
-  return origin == pos ? vec3(0) : dir * (eqLength - r) * 60.0;
+  return origin == pos ? vec3(0) : dir * (eqLength - r) * 600.0;
 }
 
 vec3 acceleration(vec3 pos) {
@@ -31,7 +31,7 @@ vec3 acceleration(vec3 pos) {
 }
 
 void main(void) {
-  float dt = 0.05;
+  float dt = 0.02;
   vec3 pos_t0 = texelFetch(posTex, vec2(0)).xyz;
   vec3 vel_t0 = texelFetch(velTex, vec2(0)).xyz;
   vec3 acc_t0 = texelFetch(accTex, vec2(0)).xyz;
@@ -41,6 +41,6 @@ void main(void) {
   vec3 pos_t1 = floor(gl_FragCoord.xy) == vec2(0,dims-1.0) || floor(gl_FragCoord.xy) == vec2(dims-1.0,dims-1.0) ? pos_t0 : pos_t0 + vel_t1 * dt;
 
   gl_FragData[0] = vec4(pos_t1, 1); // position
-  gl_FragData[1] = vec4(vel_t1 * 0.9998, 1); // velocity
+  gl_FragData[1] = vec4(vel_t1 * 0.9999, 1); // velocity
   gl_FragData[2] = vec4(acc_t1, 1); // acceleration
 }
