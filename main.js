@@ -7,7 +7,7 @@ function Particles(){
   let simulationFrameBuffers = [];
   let pingpong = 0;
   let scale = 1;
-  let texDims = 1024;
+  let texDims = 128;
   let invTexDims = 1/texDims;
   let numPoints = texDims*texDims;
   let perspective = mat4.perspective(mat4.create(), 1.6, window.innerWidth/window.innerHeight, 0.1, 10);
@@ -54,6 +54,8 @@ function Particles(){
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, texDims, texDims, 0, gl.RGB, gl.FLOAT, array);
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.bindTexture( gl.TEXTURE_2D, null );
     return t;
   }
@@ -134,22 +136,27 @@ function Particles(){
   function initSimBuffer(){
     let program = programs.sim;
     let v0 = new Float32Array(numPoints*3);
-    let v1 = new Float32Array(numPoints*3);
+    let tv1 = [];
     let v2 = new Float32Array(numPoints*3);
-    for ( let i=0; i<numPoints*3; i+=3 ){
-      let r = Math.random(),
-          phi = Math.random()*Math.PI,
-          theta = Math.random()*Math.PI*2;
-
-      r= 1-r*r;
-      v1[i] = Math.sin(phi)*r*Math.sin(theta)+ 0.5;
-      v1[i+1] = Math.cos(phi)*r + 0.5;
-      v1[i+2] = Math.sin(phi)*r*Math.cos(theta) + 0.5;
+    for ( let i=0; i<texDims; i++ ){
+      for ( let j=0; j<texDims; j++ ){
+        tv1.push((j - texDims / 2)*invTexDims * 5);
+        tv1.push((i - texDims / 2)*invTexDims * 5);
+        tv1.push(0)
+      }
     }
+    let v1 = new Float32Array(tv1);
+    // for ( let i=0; i<numPoints*3; i+=3 ){
+    //   v1[i] = ((i % texDims) - (texDims / 2)) * invTexDims * 3;
+    //   v1[i+1] = (Math.floor((i / 3) / texDims) - (texDims / 2)) * invTexDims * 3;
+    //   v1[i+2] = 1;
+    // }
+
+    //v0[3 * texDims * texDims / 2 + + 3 * texDims / 2] = 0.01;
     // for ( let i=0; i<numPoints*3; i+=3 ){
     //   v0[i] = 0.0;
-    //   v0[i+1] = 0.1;
-    //   v0[i+2] = 0.1;
+    //   v0[i+1] = 0.0;
+    //   v0[i+2] = 0.0;
     // }
 
     buffers.quad = createQuadBuffer();
@@ -170,8 +177,8 @@ function Particles(){
 
   function initPrograms(){
     let ext = gl.getExtension('WEBGL_draw_buffers');
-    programs.simulation = initProgram("shader/simulation",["velTex","posTex","accTex","dims","tick","center"],["quad"]);
-    programs.draw = initProgram("shader/draw",["velTex", "posTex","imageTex","dims","perspective","rotation"],["coords","quad"]);
+    programs.simulation = initProgram("shader/simulation",["velTex","posTex","accTex","dims","invDims","tick","center"],["quad"]);
+    programs.draw = initProgram("shader/draw",["velTex", "posTex","imageTex","invDims","perspective","rotation"],["coords","quad"]);
   }
 
   function callSimulation(i){
@@ -182,8 +189,9 @@ function Particles(){
     gl.uniform1i(program.uniforms.posTex, 0);
     gl.uniform1i(program.uniforms.velTex, 1);
     gl.uniform1i(program.uniforms.accTex, 2);
+    gl.uniform1f(program.uniforms.dims, texDims);
     gl.uniform1i(program.uniforms.tick, i);
-    gl.uniform2f(program.uniforms.dims, invTexDims, invTexDims);
+    gl.uniform2f(program.uniforms.invDims, invTexDims, invTexDims);
     gl.uniform3fv(program.uniforms.center, center);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, textures.position[i%2]);
@@ -211,7 +219,7 @@ function Particles(){
     gl.useProgram(program);
     gl.uniform1i(program.uniforms.posTex, 0);
     gl.uniform1i(program.uniforms.velTex, 1);
-    gl.uniform2f(program.uniforms.dims, invTexDims, invTexDims);
+    gl.uniform2f(program.uniforms.invDims, invTexDims, invTexDims);
     gl.uniformMatrix4fv(program.uniforms.perspective, false, perspective);
     gl.uniformMatrix4fv(program.uniforms.rotation, false, rotation);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
