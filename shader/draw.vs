@@ -5,7 +5,7 @@ attribute vec3 quad;
 
 uniform sampler2D posTex;
 uniform sampler2D velTex;
-uniform vec2 dims;
+uniform vec2 invDims;
 uniform mat4 perspective;
 uniform mat4 rotation;
 
@@ -14,7 +14,7 @@ varying vec2 quadCoord;
 
 void main(void) {
   quadCoord = quad.xy;
-  color = abs(normalize(texture2D(velTex,coords*dims).rgb));
-  vec4 pos = vec4(0.01*quad + (rotation*texture2D(posTex,coords*dims)).xyz,1);
+  color = abs(normalize(texture2D(posTex,coords*invDims).rgb));
+  vec4 pos = vec4(0.005*quad + (rotation*texture2D(posTex,coords*invDims)).xyz,1);
   gl_Position = perspective*pos;
 }
