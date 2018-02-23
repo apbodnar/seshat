@@ -27,12 +27,13 @@ function Particles(){
 
   function initGL(canvas) {
     gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    let ext = gl.getExtension('OES_element_index_uint');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.5, 0.5, 0.5, 1.0);
   }
 
   function getShader(gl, str, id) {
@@ -122,14 +123,32 @@ function Particles(){
     let vertices = [];
     for(let i=0;i<texDims;i++){
       for(let j=0;j<texDims;j++){
-        for(let k=0;k<6;k++){
-          vertices.push(j,i);
-        }
+        vertices.push(j,i);
       }
     }
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    return buffer;
+  }
+  
+  function createIndexBuffer(){
+    let buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+    var plane_indices = [];
+    var push = function(e){
+      plane_indices.push(e);
+    };
+    for(var j=0; j< texDims-1; j++){
+      for(var i=0; i<texDims-1; i++){
+        [i+(j*texDims),i+((j+1)*texDims),i+((j+1)*texDims)+1].forEach(push);
+        [i+((j+1)*texDims)+1,i+(j*texDims)+1,i+(j*texDims)].forEach(push);
+      }
+    }
+
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(plane_indices), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    buffer.size = plane_indices.length;
     return buffer;
   }
 
@@ -140,9 +159,9 @@ function Particles(){
     let v2 = new Float32Array(numPoints*3);
     for ( let i=0; i<texDims; i++ ){
       for ( let j=0; j<texDims; j++ ){
-        tv1.push((j - texDims / 2)*invTexDims * 4);
-        tv1.push((i - texDims / 2)*invTexDims * 4);
-        tv1.push(i/texDims)
+        tv1.push((j - texDims / 2)*invTexDims * 5);
+        tv1.push((i - texDims / 2)*invTexDims * 5);
+        tv1.push(-i/texDims)
       }
     }
     let v1 = new Float32Array(tv1);
@@ -161,6 +180,7 @@ function Particles(){
 
     buffers.quad = createQuadBuffer();
     buffers.coords = createCoordBuffer();
+    buffers.indices = createIndexBuffer();
     textures.velocity.push(createFloatTexture(v0));
     textures.velocity.push(createFloatTexture(v0));
     textures.position.push(createFloatTexture(v1));
@@ -178,7 +198,7 @@ function Particles(){
   function initPrograms(){
     let ext = gl.getExtension('WEBGL_draw_buffers');
     programs.simulation = initProgram("shader/simulation",["velTex","posTex","accTex","dims","invDims","tick","center"],["quad"]);
-    programs.draw = initProgram("shader/draw",["velTex", "posTex","imageTex","invDims","perspective","rotation"],["coords","quad"]);
+    programs.draw = initProgram("shader/draw",["velTex", "posTex","imageTex","invDims","perspective","rotation"],["coords"]);
   }
 
   function callSimulation(i){
@@ -216,8 +236,9 @@ function Particles(){
 
   function callDraw(i){
     let program = programs.draw;
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_COLOR, gl.ONE);
+    // gl.enable(gl.BLEND);
+    // gl.blendFunc(gl.SRC_COLOR, gl.ONE);
+    
     gl.useProgram(program);
     gl.uniform1i(program.uniforms.posTex, 0);
     gl.uniform1i(program.uniforms.velTex, 1);
@@ -226,6 +247,7 @@ function Particles(){
     gl.uniformMatrix4fv(program.uniforms.perspective, false, perspective);
     gl.uniformMatrix4fv(program.uniforms.rotation, false, rotation);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.clear(gl.COLOR_BUFFER_BIT)
     gl.viewport(0,0,window.innerWidth,window.innerHeight);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, textures.position[i%2]);
@@ -235,12 +257,11 @@ function Particles(){
     gl.bindTexture(gl.TEXTURE_2D, textures.acceleration[i%2]);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.coords);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+    
     gl.vertexAttribPointer(program.attributes.coords, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(program.attributes.coords);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.quad);
-    gl.vertexAttribPointer(program.attributes.quad, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(program.attributes.quad);
-    gl.drawArrays(gl.TRIANGLES, 0, numPoints*6);
+    gl.drawElements(gl.TRIANGLES,buffers.indices.size, gl.UNSIGNED_INT, 0);
   }
 
   function initListeners(){

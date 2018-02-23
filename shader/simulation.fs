@@ -16,18 +16,21 @@ vec4 texelFetch(sampler2D tex, vec2 coords){
 
 vec3 neighborForce(vec2 coords, vec3 origin){
   vec3 pos = texelFetch(posTex, coords).xyz;
-  float eqLength = invDims.x * 4.0;
+  float eqLength = invDims.x * 5.0;
   vec3 diff = origin - pos;
   float r = length(diff);
   vec3 dir = normalize(diff);
-  return origin == pos ? vec3(0) : dir * (eqLength - r) * 600.0;
+  return origin == pos ? vec3(0) : dir * (eqLength - r) * (0.01 * dims*dims);
 }
 
 vec3 acceleration(vec3 pos) {
+  vec3 diff = center - pos;
+  float r = length(diff);
+  vec3 dir = normalize(diff);
   vec3 acc = neighborForce(vec2(1.0, 0.0), pos);
   acc += neighborForce(vec2(-1.0, 0.0), pos);
   acc += neighborForce(vec2(0.0, 1.0), pos);
-  return acc + neighborForce(vec2(0.0, -1.0), pos) + vec3(0,-0.0005,0);
+  return acc + neighborForce(vec2(0.0, -1.0), pos) + vec3(0,-0.0002,0) + (-dir * (0.001 / (r*r)));
 }
 
 void main(void) {
