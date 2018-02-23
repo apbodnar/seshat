@@ -30,7 +30,7 @@ vec3 acceleration(vec3 pos) {
   vec3 acc = neighborForce(vec2(1.0, 0.0), pos);
   acc += neighborForce(vec2(-1.0, 0.0), pos);
   acc += neighborForce(vec2(0.0, 1.0), pos);
-  return acc + neighborForce(vec2(0.0, -1.0), pos) + vec3(0,-0.0002,0) + (-dir * (0.001 / (r*r)));
+  return acc + neighborForce(vec2(0.0, -1.0), pos) + vec3(0,-0.0002,0) + (-dir * (0.001 / pow(r,6.0)));
 }
 
 void main(void) {
