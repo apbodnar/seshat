@@ -161,7 +161,7 @@ function Particles(){
       for ( let j=0; j<texDims; j++ ){
         tv1.push((j - texDims / 2)*invTexDims * 5);
         tv1.push((i - texDims / 2)*invTexDims * 5);
-        tv1.push(-i/texDims)
+        tv1.push(-0.1 + 3*(i - texDims)/texDims)
       }
     }
     let v1 = new Float32Array(tv1);
@@ -278,19 +278,25 @@ function Particles(){
     canvas.addEventListener("mousemove", function(e){
       if(down){
         moving = true;
-        mat4.rotateY(rotation, rotation,(e.layerX - xi)*0.01);
-        mat4.rotateX(rotation, rotation,(e.layerY - yi)*0.01);
+        // mat4.rotateY(rotation, rotation,(e.layerX - xi)*0.01);
+        // mat4.rotateX(rotation, rotation,(e.layerY - yi)*0.01);
         xi = e.layerX;
         yi = e.layerY;
-      }
-    }, false);
-    canvas.addEventListener("mouseup", function(){
-      down = false;
-      if(!moving){
         center[0] = 3*(2*xi/canvas.width - 1);
         center[1] = 3*(-2*yi/canvas.height + 1);
       }
     }, false);
+    
+    canvas.addEventListener("wheel", function(e){
+      mat4.rotateY(rotation, rotation,e.deltaY*0.001);
+    });
+    // canvas.addEventListener("mouseup", function(){
+      // down = false;
+      // if(!moving){
+        // center[0] = 3*(2*xi/canvas.width - 1);
+        // center[1] = 3*(-2*yi/canvas.height + 1);
+      // }
+    // }, false);
   }
 
   function tick() {

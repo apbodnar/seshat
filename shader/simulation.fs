@@ -20,7 +20,7 @@ vec3 neighborForce(vec2 coords, vec3 origin){
   vec3 diff = origin - pos;
   float r = length(diff);
   vec3 dir = normalize(diff);
-  return origin == pos ? vec3(0) : dir * (eqLength - r) * (0.01 * dims*dims);
+  return origin == pos ? vec3(0) : dir * (eqLength - r) * (0.005 * dims*dims);
 }
 
 vec3 acceleration(vec3 pos) {
@@ -30,7 +30,7 @@ vec3 acceleration(vec3 pos) {
   vec3 acc = neighborForce(vec2(1.0, 0.0), pos);
   acc += neighborForce(vec2(-1.0, 0.0), pos);
   acc += neighborForce(vec2(0.0, 1.0), pos);
-  return acc + neighborForce(vec2(0.0, -1.0), pos) + vec3(0,-0.0002,0) + (-dir * (0.001 / pow(r,6.0)));
+  return acc + neighborForce(vec2(0.0, -1.0), pos) + vec3(0,-0.0002,0) + (-dir * (0.0001 / (r*r)));
 }
 
 void main(void) {
@@ -44,6 +44,6 @@ void main(void) {
   vec3 pos_t1 = floor(gl_FragCoord.xy) == vec2(0,dims-1.0) || floor(gl_FragCoord.xy) == vec2(dims-1.0,dims-1.0) ? pos_t0 : pos_t0 + vel_t1 * dt;
 
   gl_FragData[0] = vec4(pos_t1, 1); // position
-  gl_FragData[1] = vec4(vel_t1 * 0.9999, 1); // velocity
+  gl_FragData[1] = vec4(vel_t1 * 0.9998, 1); // velocity
   gl_FragData[2] = vec4(acc_t1, 1); // acceleration
 }
