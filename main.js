@@ -22,8 +22,7 @@ function Particles(){
     "shader/simulation.fs",
     "shader/draw.vs",
     "shader/draw.fs",
-    "texture/depth.png",
-    "texture/depth.jpg"
+    "texture/cloth.jpg"
   ];
 
   let assets = {};
@@ -33,7 +32,7 @@ function Particles(){
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
     gl.clearColor(0.5, 0.5, 0.5, 1.0);
   }
@@ -64,11 +63,12 @@ function Particles(){
   function createImageTexture(image){
     let t = gl.createTexture();
     gl.bindTexture( gl.TEXTURE_2D, t ) ;
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
     gl.bindTexture( gl.TEXTURE_2D, null );
     return t;
   }
@@ -198,7 +198,7 @@ function Particles(){
     textures.velocity.push(createFloatTexture(v0));
     textures.position.push(createFloatTexture(v1));
     textures.position.push(createFloatTexture(v1));
-    textures.image = createImageTexture(assets["texture/depth.jpg"])
+    textures.image = createImageTexture(assets["texture/cloth.jpg"])
     textures.acceleration.push(createFloatTexture(v2));
     textures.acceleration.push(createFloatTexture(v2));
     simulationFrameBuffers.push(createFramebuffer(textures.position[0], textures.velocity[0], textures.acceleration[0]));

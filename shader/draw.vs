@@ -29,7 +29,7 @@ vec3 getNormal(vec3 pos){
 
 void main(void) {
   vec4 pos = texture2D(posTex,coords*invDims);
-  texCoords = coords*invDims;
+  texCoords = -4.0 * coords*invDims + vec2(1) ;
   //color = texture2D(imageTex,coords*invDims).rgb;//vec3(0.3,1,1);//abs(vec3(cos(distance(center, pos.xyz)*1.0)));
   normal = getNormal(pos.xyz);
   vec4 posTrans = vec4((rotation*pos).xyz,1);
