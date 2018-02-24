@@ -12,22 +12,24 @@ function Particles(){
   let numPoints = texDims*texDims;
   let perspective = mat4.perspective(mat4.create(), 1.6, window.innerWidth/window.innerHeight, 0.1, 10);
   let rotation = mat4.translate(mat4.create(), mat4.create(), [0,0,-3]);
-  let center = new Float32Array([0,0,0]);
+  let center = new Float32Array([0,3,0.05]);
   let isFramed = !!window.frameElement;
   let active = !isFramed;
+  let draw_buffer_ext;
 
   let paths = [
     "shader/simulation.vs",
     "shader/simulation.fs",
     "shader/draw.vs",
-    "shader/draw.fs"
+    "shader/draw.fs",
+    "texture/depth.png",
+    "texture/depth.jpg"
   ];
 
   let assets = {};
 
   function initGL(canvas) {
     gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-    let ext = gl.getExtension('OES_element_index_uint');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -49,8 +51,6 @@ function Particles(){
 
   function createFloatTexture(array) {
     let t = gl.createTexture();
-    gl.getExtension('OES_texture_float');
-    //gl.getExtension('OES_texture_float_linear');
     gl.bindTexture( gl.TEXTURE_2D, t ) ;
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, texDims, texDims, 0, gl.RGB, gl.FLOAT, array);
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
@@ -60,19 +60,31 @@ function Particles(){
     gl.bindTexture( gl.TEXTURE_2D, null );
     return t;
   }
+  
+  function createImageTexture(image){
+    let t = gl.createTexture();
+    gl.bindTexture( gl.TEXTURE_2D, t ) ;
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.bindTexture( gl.TEXTURE_2D, null );
+    return t;
+  }
 
   function createFramebuffer(posTex, velTex, accTex){
-    let ext = gl.getExtension('WEBGL_draw_buffers');
     let fbo = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT0_WEBGL, gl.TEXTURE_2D, posTex, 0);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, velTex, 0);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, accTex, 0);
-    ext.drawBuffersWEBGL([
-      ext.COLOR_ATTACHMENT0_WEBGL,
-      ext.COLOR_ATTACHMENT1_WEBGL,
-      ext.COLOR_ATTACHMENT2_WEBGL
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, draw_buffer_ext.COLOR_ATTACHMENT0_WEBGL, gl.TEXTURE_2D, posTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, draw_buffer_ext.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, velTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, draw_buffer_ext.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, accTex, 0);
+    draw_buffer_ext.drawBuffersWEBGL([
+      draw_buffer_ext.COLOR_ATTACHMENT0_WEBGL,
+      draw_buffer_ext.COLOR_ATTACHMENT1_WEBGL,
+      draw_buffer_ext.COLOR_ATTACHMENT2_WEBGL
     ]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return fbo;
   }
 
@@ -159,9 +171,10 @@ function Particles(){
     let v2 = new Float32Array(numPoints*3);
     for ( let i=0; i<texDims; i++ ){
       for ( let j=0; j<texDims; j++ ){
+        
         tv1.push((j - texDims / 2)*invTexDims * 5);
-        tv1.push((i - texDims / 2)*invTexDims * 5);
-        tv1.push(-0.1 + 3*(i - texDims)/texDims)
+        tv1.push(3)
+        tv1.push(2.5 - (i - texDims / 2)*invTexDims * 5);
       }
     }
     let v1 = new Float32Array(tv1);
@@ -185,6 +198,7 @@ function Particles(){
     textures.velocity.push(createFloatTexture(v0));
     textures.position.push(createFloatTexture(v1));
     textures.position.push(createFloatTexture(v1));
+    textures.image = createImageTexture(assets["texture/depth.jpg"])
     textures.acceleration.push(createFloatTexture(v2));
     textures.acceleration.push(createFloatTexture(v2));
     simulationFrameBuffers.push(createFramebuffer(textures.position[0], textures.velocity[0], textures.acceleration[0]));
@@ -196,9 +210,11 @@ function Particles(){
   }
 
   function initPrograms(){
-    let ext = gl.getExtension('WEBGL_draw_buffers');
-    programs.simulation = initProgram("shader/simulation",["velTex","posTex","accTex","dims","invDims","tick","center"],["quad"]);
-    programs.draw = initProgram("shader/draw",["velTex", "posTex","imageTex","invDims","perspective","rotation"],["coords"]);
+    gl.getExtension('OES_element_index_uint');
+    gl.getExtension('OES_texture_float');
+    draw_buffer_ext = gl.getExtension('WEBGL_draw_buffers');
+    programs.simulation = initProgram("shader/simulation",["velTex","posTex","accTex","imageTex","dims","invDims","tick","center"],["quad"]);
+    programs.draw = initProgram("shader/draw",["velTex", "posTex","accTex","imageTex","invDims","perspective","rotation", "center"],["coords"]);
   }
 
   function callSimulation(i){
@@ -209,6 +225,7 @@ function Particles(){
     gl.uniform1i(program.uniforms.posTex, 0);
     gl.uniform1i(program.uniforms.velTex, 1);
     gl.uniform1i(program.uniforms.accTex, 2);
+    gl.uniform1i(program.uniforms.imageTex, 3);
     gl.uniform1f(program.uniforms.dims, texDims);
     gl.uniform1i(program.uniforms.tick, i);
     gl.uniform2f(program.uniforms.invDims, invTexDims, invTexDims);
@@ -219,6 +236,8 @@ function Particles(){
     gl.bindTexture(gl.TEXTURE_2D, textures.velocity[i%2]);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, textures.acceleration[i%2]);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, textures.image);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, simulationFrameBuffers[(i+1)%2]);
     gl.viewport(0,0,texDims,texDims);
@@ -243,18 +262,22 @@ function Particles(){
     gl.uniform1i(program.uniforms.posTex, 0);
     gl.uniform1i(program.uniforms.velTex, 1);
     gl.uniform1i(program.uniforms.accTex, 2);
+    gl.uniform1i(program.uniforms.imageTex, 3);
     gl.uniform2f(program.uniforms.invDims, invTexDims, invTexDims);
+    gl.uniform3fv(program.uniforms.center, center);
     gl.uniformMatrix4fv(program.uniforms.perspective, false, perspective);
     gl.uniformMatrix4fv(program.uniforms.rotation, false, rotation);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.viewport(0,0,window.innerWidth,window.innerHeight);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, textures.position[i%2]);
+    gl.bindTexture(gl.TEXTURE_2D, textures.position[(i+1)%2]);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, textures.velocity[i%2]);
+    gl.bindTexture(gl.TEXTURE_2D, textures.velocity[(i+1)%2]);
     gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, textures.acceleration[i%2]);
+    gl.bindTexture(gl.TEXTURE_2D, textures.acceleration[(i+1)%2]);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, textures.image);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers.coords);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);

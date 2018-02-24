@@ -5,11 +5,15 @@ attribute vec2 coords;
 uniform sampler2D posTex;
 uniform sampler2D velTex;
 uniform sampler2D accTex;
+uniform sampler2D imageTex;
 uniform vec2 invDims;
 uniform mat4 perspective;
 uniform mat4 rotation;
+uniform vec3 center;
 
 varying vec3 color;
+varying vec3 normal;
+varying vec2 texCoords;
 
 vec3 getNormal(vec3 pos){
   vec3 n0 = texture2D(posTex,(coords + vec2(0,1))*invDims).xyz;
@@ -24,10 +28,10 @@ vec3 getNormal(vec3 pos){
 }
 
 void main(void) {
-  //quadCoord = quad.xy;
-  //color = abs(normalize(texture2D(accTex,coords*invDims).rgb));
   vec4 pos = texture2D(posTex,coords*invDims);
-  color = getNormal(pos.xyz);
+  texCoords = coords*invDims;
+  //color = texture2D(imageTex,coords*invDims).rgb;//vec3(0.3,1,1);//abs(vec3(cos(distance(center, pos.xyz)*1.0)));
+  normal = getNormal(pos.xyz);
   vec4 posTrans = vec4((rotation*pos).xyz,1);
   gl_Position = perspective*posTrans;
 }
