@@ -51,7 +51,7 @@ function Particles(){
   function createFloatTexture(array) {
     let t = gl.createTexture();
     gl.bindTexture( gl.TEXTURE_2D, t ) ;
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, texDims, texDims, 0, gl.RGB, gl.FLOAT, array);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texDims, texDims, 0, gl.RGBA, gl.FLOAT, array);
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -166,15 +166,16 @@ function Particles(){
 
   function initSimBuffer(){
     let program = programs.sim;
-    let v0 = new Float32Array(numPoints*3);
+    let v0 = new Float32Array(numPoints*4);
     let tv1 = [];
-    let v2 = new Float32Array(numPoints*3);
+    let v2 = new Float32Array(numPoints*4);
     for ( let i=0; i<texDims; i++ ){
       for ( let j=0; j<texDims; j++ ){
         
         tv1.push((j - texDims / 2)*invTexDims * 5);
         tv1.push(3)
         tv1.push(2.5 - (i - texDims / 2)*invTexDims * 5);
+        tv1.push(0);
       }
     }
     let v1 = new Float32Array(tv1);
@@ -268,7 +269,7 @@ function Particles(){
     gl.uniformMatrix4fv(program.uniforms.perspective, false, perspective);
     gl.uniformMatrix4fv(program.uniforms.rotation, false, rotation);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clear(gl.COLOR_BUFFER_BIT)
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0,0,window.innerWidth,window.innerHeight);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, textures.position[(i+1)%2]);
