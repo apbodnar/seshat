@@ -12,7 +12,7 @@ function Particles(){
   let numPoints = texDims*texDims;
   let perspective = mat4.perspective(mat4.create(), 1.6, window.innerWidth/window.innerHeight, 0.1, 10);
   let rotation = mat4.translate(mat4.create(), mat4.create(), [0,0,-3]);
-  let center = new Float32Array([0,3,0.05]);
+  let center = new Float32Array([0,5,0.05]);
   let isFramed = !!window.frameElement;
   let active = !isFramed;
   let draw_buffer_ext;
@@ -173,9 +173,9 @@ function Particles(){
       for ( let j=0; j<texDims; j++ ){
         
         tv1.push((j - texDims / 2)*invTexDims * 5);
-        tv1.push(3)
+        tv1.push(3);
         tv1.push(2.5 - (i - texDims / 2)*invTexDims * 5);
-        tv1.push(0);
+        tv1.push(1);
       }
     }
     let v1 = new Float32Array(tv1);
@@ -256,8 +256,9 @@ function Particles(){
 
   function callDraw(i){
     let program = programs.draw;
-    // gl.enable(gl.BLEND);
-    // gl.blendFunc(gl.SRC_COLOR, gl.ONE);
+    gl.enable(gl.BLEND);
+    gl.depthFunc(gl.LESS);
+    //gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     
     gl.useProgram(program);
     gl.uniform1i(program.uniforms.posTex, 0);

@@ -15,6 +15,8 @@ varying vec3 color;
 varying vec3 normal;
 varying vec2 texCoords;
 
+varying float cut;
+
 vec3 getNormal(vec3 pos){
   vec3 n0 = texture2D(posTex,(coords + vec2(0,1))*invDims).xyz;
   vec3 n1 = texture2D(posTex,(coords + vec2(1,0))*invDims).xyz;
@@ -29,6 +31,7 @@ vec3 getNormal(vec3 pos){
 
 void main(void) {
   vec4 pos = texture2D(posTex,coords*invDims);
+  cut = pos.w;
   texCoords = -4.0 * coords*invDims + vec2(1) ;
   color = texture2D(imageTex,coords*invDims).rgb;//vec3(0.3,1,1);//abs(vec3(cos(distance(center, pos.xyz)*1.0)));
   normal = getNormal(pos.xyz);
