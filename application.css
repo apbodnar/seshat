@@ -1,0 +1,24 @@
+body {
+    text-align: center;
+    margin: 0; overflow: hidden;
+    background: #000;
+}
+canvas {
+    border: none;
+    width:100%;
+}
+
+#controls {
+    position: fixed;
+    top: 20px;
+    left: 10px;
+}
+
+label {
+    color: #fff;
+}
+
+input {
+    width: 100%;
+    display: block;
+}

@@ -1,5 +1,5 @@
 "use strict";
-function Particles(){
+function Cloth(){
   let gl;
   let programs = {};
   let buffers = {};
@@ -7,15 +7,19 @@ function Particles(){
   let simulationFrameBuffers = [];
   let pingpong = 0;
   let scale = 1;
-  let texDims = 256;
+  let texDims = null;
+  let springConstant = null;
+  let simTicks = null;
+  let deltaT = null;
   let invTexDims = 1/texDims;
   let numPoints = texDims*texDims;
   let perspective = mat4.perspective(mat4.create(), 1.6, window.innerWidth/window.innerHeight, 0.1, 10);
   let rotation = mat4.translate(mat4.create(), mat4.create(), [0,0,-3]);
-  let center = new Float32Array([0,5,0.05]);
+  let center = new Float32Array([0,5,1]);
   let isFramed = !!window.frameElement;
   let active = !isFramed;
   let draw_buffer_ext;
+  let renderLock = false;
 
   let paths = [
     "shader/simulation.vs",
@@ -28,6 +32,7 @@ function Particles(){
   let assets = {};
 
   function initGL(canvas) {
+    applyInputs();
     gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -147,12 +152,12 @@ function Particles(){
   function createIndexBuffer(){
     let buffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
-    var plane_indices = [];
-    var push = function(e){
+    let plane_indices = [];
+    let push = function(e){
       plane_indices.push(e);
     };
-    for(var j=0; j< texDims-1; j++){
-      for(var i=0; i<texDims-1; i++){
+    for(let j=0; j< texDims-1; j++){
+      for(let i=0; i<texDims-1; i++){
         [i+(j*texDims),i+((j+1)*texDims),i+((j+1)*texDims)+1].forEach(push);
         [i+((j+1)*texDims)+1,i+(j*texDims)+1,i+(j*texDims)].forEach(push);
       }
@@ -165,7 +170,6 @@ function Particles(){
   }
 
   function initSimBuffer(){
-    let program = programs.sim;
     let v0 = new Float32Array(numPoints*4);
     let tv1 = [];
     let v2 = new Float32Array(numPoints*4);
@@ -179,18 +183,6 @@ function Particles(){
       }
     }
     let v1 = new Float32Array(tv1);
-    // for ( let i=0; i<numPoints*3; i+=3 ){
-    //   v1[i] = ((i % texDims) - (texDims / 2)) * invTexDims * 3;
-    //   v1[i+1] = (Math.floor((i / 3) / texDims) - (texDims / 2)) * invTexDims * 3;
-    //   v1[i+2] = 1;
-    // }
-
-    //v0[2] = 0.1;
-    // for ( let i=0; i<numPoints*3; i+=3 ){
-    //   v0[i] = 0.0;
-    //   v0[i+1] = 0.0;
-    //   v0[i+2] = 0.0;
-    // }
 
     buffers.quad = createQuadBuffer();
     buffers.coords = createCoordBuffer();
@@ -199,7 +191,7 @@ function Particles(){
     textures.velocity.push(createFloatTexture(v0));
     textures.position.push(createFloatTexture(v1));
     textures.position.push(createFloatTexture(v1));
-    textures.image = createImageTexture(assets["texture/cloth.jpg"])
+    textures.image = createImageTexture(assets["texture/cloth.jpg"]);
     textures.acceleration.push(createFloatTexture(v2));
     textures.acceleration.push(createFloatTexture(v2));
     simulationFrameBuffers.push(createFramebuffer(textures.position[0], textures.velocity[0], textures.acceleration[0]));
@@ -214,7 +206,7 @@ function Particles(){
     gl.getExtension('OES_element_index_uint');
     gl.getExtension('OES_texture_float');
     draw_buffer_ext = gl.getExtension('WEBGL_draw_buffers');
-    programs.simulation = initProgram("shader/simulation",["velTex","posTex","accTex","imageTex","dims","invDims","tick","center"],["quad"]);
+    programs.simulation = initProgram("shader/simulation",["springK","deltaT","velTex","posTex","accTex","imageTex","dims","invDims","tick","center"],["quad"]);
     programs.draw = initProgram("shader/draw",["velTex", "posTex","accTex","imageTex","invDims","perspective","rotation", "center"],["coords"]);
   }
 
@@ -223,6 +215,8 @@ function Particles(){
     gl.disable(gl.BLEND);
     gl.useProgram(program);
     gl.uniform1f(program.uniforms.scale, scale);
+    gl.uniform1f(program.uniforms.deltaT, deltaT);
+    gl.uniform1f(program.uniforms.springK, springConstant);
     gl.uniform1i(program.uniforms.posTex, 0);
     gl.uniform1i(program.uniforms.velTex, 1);
     gl.uniform1i(program.uniforms.accTex, 2);
@@ -249,9 +243,53 @@ function Particles(){
   }
 
   function callSim(i){
-    for(let i = 0; i < 60; i++){
+    for(let i = 0; i < simTicks; i++){
       callSimulation(i);
     }
+  }
+
+  function updateResolution(){
+    let res = Math.pow(2, Number(document.getElementById('resolution-range').value));
+    document.querySelector('label[for="resolution-range"] > span').innerHTML = res;
+    return res;
+  }
+
+  function updateSpring(){
+    let res = Number(document.getElementById('spring-range').value) * 0.001;
+    document.querySelector('label[for="spring-range"] > span').innerHTML = res.toPrecision(3);
+    return res;
+  }
+
+  function updateTicks(){
+    let res = Number(document.getElementById('ticks-range').value);
+    document.querySelector('label[for="ticks-range"] > span').innerHTML = res;
+    return res;
+  }
+
+  function updateDeltaT(){
+    let res = Number(document.getElementById('delta-range').value) * 0.001;
+    document.querySelector('label[for="delta-range"] > span').innerHTML = res.toPrecision(2);
+    return res;
+  }
+
+  function applyInputs(){
+    texDims = updateResolution();
+    springConstant = updateSpring();
+    simTicks = updateTicks();
+    deltaT = updateDeltaT();
+    invTexDims = 1/texDims;
+    numPoints = texDims*texDims;
+  }
+
+  function reinitialize(e){
+    renderLock = true;
+    applyInputs();
+    textures.velocity = [];
+    textures.position = [];
+    textures.acceleration = [];
+    simulationFrameBuffers = [];
+    initSimBuffer();
+    renderLock = false;
   }
 
   function callDraw(i){
@@ -291,6 +329,7 @@ function Particles(){
 
   function initListeners(){
     let canvas = document.getElementById("trace");
+    let applyButton = document.getElementById('apply-button');
     let xi, yi;
     let moving = false;
     let down = false;
@@ -309,24 +348,27 @@ function Particles(){
         yi = e.layerY;
         center[0] = 3*(2*xi/canvas.width - 1);
         center[1] = 3*(-2*yi/canvas.height + 1);
+        center[2] = 0;
       }
     }, false);
     
     canvas.addEventListener("wheel", function(e){
       mat4.rotateY(rotation, rotation,e.deltaY*0.001);
     });
-    // canvas.addEventListener("mouseup", function(){
-      // down = false;
-      // if(!moving){
-        // center[0] = 3*(2*xi/canvas.width - 1);
-        // center[1] = 3*(-2*yi/canvas.height + 1);
-      // }
-    // }, false);
+    canvas.addEventListener("mouseup", function(){
+      down = false;
+      center[2] = 1;
+    }, false);
+    applyButton.addEventListener("click", reinitialize)
+    document.getElementById('resolution-range').addEventListener("input", updateResolution);
+    document.getElementById('spring-range').addEventListener("input", updateSpring);
+    document.getElementById('ticks-range').addEventListener("input", updateTicks);
+    document.getElementById('delta-range').addEventListener("input", updateDeltaT);
   }
 
   function tick() {
     requestAnimationFrame(tick);
-    if(active){
+    if(active && !renderLock){
       pingpong++;
       callSim(pingpong);
       callDraw(pingpong);
@@ -348,5 +390,5 @@ function Particles(){
   loadAll(paths,start);
 };
 
-new Particles();
+new Cloth();
 
